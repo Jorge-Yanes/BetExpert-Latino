@@ -1,7 +1,6 @@
 {
-  "functions": {
-    "api/sendScheduledMessages.ts": {
-      "cron": "*/5 * * * *"
-    }
+    "crons": [{
+      "path": "api/sendScheduledMessages.ts",
+      "schedule": "0 10 * * *"
+    }]
   }
-}
