@@ -22,11 +22,11 @@ export default async function handler(req, res) {
 
   snapshot.forEach(async (doc) => {
     const data = doc.data();
-    //const scheduledTime = new Date(data.scheduledTime);
+    const scheduledTime = new Date(data.scheduledTime);
     //const YOUR_BOT_TOKEN = '8106664155:AAEbLO9kcy0ehQyxvztLtw8vIntwSszkkjY';
-    const chatId = '1002356737756';
+    const chatId = '983898332';
 
-    //if (!data.sent && scheduledTime <= now) {
+    if (!data.sent && scheduledTime <= now) {
       try {
         // Send message to Telegram channel
         await axios.post(`https://api.telegram.org/bot8106664155:AAEbLO9kcy0ehQyxvztLtw8vIntwSszkkjY/sendMessage`, {
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       } catch (error) {
         console.error("Error sending message: ", error);
       }
-    //}
+    }
   });
 
   res.status(200).json({ message: "Scheduled messages processed" });
