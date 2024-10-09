@@ -20,6 +20,7 @@ const TELEGRAM_CHAT_ID = "-1002356737756"; // Reemplaza esto con el chat ID dond
 
 
 export default async function handler(req, res) {
+  console.log("LLAMA A CRONJOB");
   const now = new Date();
   const messagesRef = collection(db, "mensajesBuenosDias");
   const snapshot = await getDocs(messagesRef);
