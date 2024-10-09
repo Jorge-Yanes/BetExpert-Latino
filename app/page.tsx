@@ -100,10 +100,13 @@ export default function Page() {
   // Save image and text to Firestore
   const handleSave = async () => {
     const dateKey = date.toString().split("T")[0];
+    const randomMinutes = Math.floor(Math.random() * 60); // Random minutes between 0 and 59
+    const scheduledTime = `${dateKey}T09:${randomMinutes}:00`; // Schedule for 9 AM with random minutes
 
     console.log("Fecha seleccionada para guardar: ", dateKey); // Debug para la fecha
     console.log("Texto: ", textField); // Debug para el texto
     console.log("URL de imagen: ", imageUrl); // Debug para la imagen
+    console.log("Scheduled Time: ", scheduledTime); // Debug for scheduled time
 
     // Si no hay imagen, asigna una aleatoria
     if (imageUrl.length === 0) {
@@ -117,10 +120,12 @@ export default function Page() {
           text: textField,
           imageUrl: imageUrl,
           date: dateKey,
+          scheduledTime: scheduledTime, // Add scheduled time
+          sent: false, // Flag to indicate if the message has been sent
         });
-        console.log("Data saved successfully!");
+        console.log("Mensaje guardado correctamente y programado a", dateKey, scheduledTime);
         setMessage("Data saved successfully!");
-        alert("Mensaje guardado correctamente!"); // Pop-up de confirmación
+        alert("Mensaje guardado correctamente y programado a"); // Pop-up de confirmación
       } catch (error) {
         console.log("Error al guardar los datos en Firestore: ", error); // Debug de errores
         console.error("Error details: ", JSON.stringify(error, null, 2));
