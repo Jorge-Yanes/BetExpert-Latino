@@ -168,11 +168,10 @@ export default function Page() {
           </button>
         </div>
 
-        <input
-          type="text"
+        <textarea
           value={textField}
           onChange={(e) => setTextField(e.target.value)}
-          className="w-full h-48 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full h-48 p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-y-auto"
           placeholder="Enter text..."
         />
 
