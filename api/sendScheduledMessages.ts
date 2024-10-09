@@ -24,7 +24,7 @@ export default async function handler(req, res) {
     const data = doc.data();
     const scheduledTime = new Date(data.scheduledTime);
     //const YOUR_BOT_TOKEN = '8106664155:AAEbLO9kcy0ehQyxvztLtw8vIntwSszkkjY';
-    const chatId = '983898332';
+    const chatId = '-1002356737756';
 
     if (!data.sent && scheduledTime <= now) {
       try {
