@@ -1,6 +1,6 @@
 {
     "crons": [{
       "path": "/api/sendScheduledMessages.ts",
-      "schedule": "12 * * * *"
+      "schedule": "0 13 * * *"
     }]
   }
