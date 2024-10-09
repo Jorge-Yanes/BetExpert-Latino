@@ -1,7 +1,20 @@
+import { initializeApp } from "firebase/app";
 import { getFirestore, collection, getDocs, updateDoc, doc } from "firebase/firestore";
 import axios from "axios";
 
+const firebaseConfig = {
+  apiKey: "AIzaSyBGBlSmL5WDTCnjjzgbMdmwNYZmw4Y3Fgk",
+  authDomain: "betexpert-latino.firebaseapp.com",
+  projectId: "betexpert-latino",
+  storageBucket: "betexpert-latino.appspot.com",
+  messagingSenderId: "713344855947",
+  appId: "1:713344855947:web:3aa4f8a93b89e8ea9b898e",
+  measurementId: "G-939C0DNPP7",
+};
+
+const app = initializeApp(firebaseConfig);
 const db = getFirestore();
+
 
 export default async function handler(req, res) {
   const now = new Date();
