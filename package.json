@@ -7,9 +7,13 @@
     "build:css": "tailwindcss build styles.css -o output.css"
   },
   "dependencies": {
+    "@nextui-org/react": "^2.4.8",
+    "@twa-dev/sdk": "^7.10.1",
+    "@twa-dev/types": "^7.10.0",
     "firebase": "^10.14.0",
     "next": "latest",
     "react": "^18.2.0",
+    "react-calendar": "^5.0.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
