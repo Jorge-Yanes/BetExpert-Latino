@@ -1,6 +1,6 @@
-import { initializeApp } from "firebase/app";
-import { getFirestore, collection, getDocs, updateDoc, doc } from "firebase/firestore";
-import axios from "axios";
+const { initializeApp } = require("firebase/app");
+const { getFirestore, collection, getDocs, updateDoc } = require("firebase/firestore");
+const axios = require("axios");
 
 const firebaseConfig = {
   apiKey: "AIzaSyBGBlSmL5WDTCnjjzgbMdmwNYZmw4Y3Fgk",
@@ -13,8 +13,7 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore();
-
+const db = getFirestore(app);
 
 export default async function handler(req, res) {
   const now = new Date();
