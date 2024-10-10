@@ -1,6 +1,6 @@
-const { initializeApp } = require("firebase/app");
 const { getFirestore, collection, getDocs, updateDoc } = require("firebase/firestore");
 const axios = require("axios");
+const { initializeApp } = require("firebase/app");
 
 const firebaseConfig = {
   apiKey: "AIzaSyBGBlSmL5WDTCnjjzgbMdmwNYZmw4Y3Fgk",
@@ -29,19 +29,21 @@ export default async function handler(req, res) {
   snapshot.forEach(async (doc) => {
     const data = doc.data();
     const scheduledTime = new Date(data.scheduledTime);
+    //const message = `*Mensaje del día:*\n${text}`;
+
 
     if (!data.sent && scheduledTime <= now) {
       try {
         // Send message to Telegram channel
+        await axios.post(url, {
+            chat_id: TELEGRAM_CHAT_ID,
+          text: data.text,
+        });
+
         const photoUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
         await axios.post(photoUrl, {
           chat_id: TELEGRAM_CHAT_ID,
           photo: data.imageUrl,
-        });
-
-        await axios.post(url, {
-          chat_id: TELEGRAM_CHAT_ID,
-          text: data.text,
         });
 
         // Update Firestore document to mark as sent
