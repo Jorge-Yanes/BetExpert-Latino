@@ -100,7 +100,7 @@ export default function Page() {
   // Save image and text to Firestore
   const handleSave = async () => {
     const dateKey = date.toString().split("T")[0];
-    const randomMinutes = Math.floor(Math.random() * 60); // Random minutes between 0 and 59
+    const randomMinutes = Math.floor(Math.random() * 54); // Random minutes between 0 and 59
     const scheduledTime = `${dateKey}T09:${randomMinutes}:00`; // Schedule for 9 AM with random minutes
 
     console.log("Fecha seleccionada para guardar: ", dateKey); // Debug para la fecha

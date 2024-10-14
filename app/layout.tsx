@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import '../styles/global.css';
 import Script from "next/script";
+import Link from "next/link"; // Importa Link para la navegación
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -29,9 +30,11 @@ export default function RootLayout({
       <head>
         <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <nav className="flex space-x-4 p-4 bg-gray-200">
+          <Link href="/">Programar Mensajes Buenos Dias</Link>
+          <Link href="/nuevaApuesta">Nueva Apuesta</Link> {/* Enlace a la segunda pestaña */}
+        </nav>
         {children}
       </body>
     </html>
