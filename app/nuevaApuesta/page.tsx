@@ -1,8 +1,32 @@
 "use client";
 
+import { initializeApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
 import { useState, useEffect, useRef } from "react";
 import OpenAI from "openai";
 import axios from 'axios';
+import Image from "next/image";
+import { getStorage, ref, listAll, getDownloadURL } from "firebase/storage";
+import dotenv from 'dotenv';
+
+// Cargar las variables de entorno
+dotenv.config();
+
+const GOOGLE_API_KEY = 'AIzaSyBqBYaTcKqtgCtYgTeRxZZZel30IoLxL1Q';
+const GOOGLE_CX = 'e3eff5474587546a7';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBGBlSmL5WDTCnjjzgbMdmwNYZmw4Y3Fgk",
+  authDomain: "betexpert-latino.firebaseapp.com",
+  projectId: "betexpert-latino",
+  storageBucket: "betexpert-latino.appspot.com",
+  messagingSenderId: "713344855947",
+  appId: "1:713344855947:web:3aa4f8a93b89e8ea9b898e",
+  measurementId: "G-939C0DNPP7",
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore();
 
 const TELEGRAM_BOT_TOKEN = "8106664155:AAEbLO9kcy0ehQyxvztLtw8vIntwSszkkjY"; // Reemplaza esto con tu token de bot de Telegram
 const TELEGRAM_CHAT_ID = "-1002356737756"; // Reemplaza esto con el chat ID donde quieres enviar el mensaje
@@ -23,6 +47,58 @@ export default function NuevaApuesta() {
   const [analisis, setAnalisis] = useState<string>("");
   const [recomendacion, setRecomendacion] = useState<string>("");
   const [message, setMessage] = useState<string>("");
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [imageUrl, setImageUrl] = useState<string>("");
+  const [imagenPartidoGoogleAPIUrl, setImagenPartidoGoogleAPIUrl] = useState<string>("");
+
+  const fetchImageUrls = async () => {
+    const storageRef = ref(getStorage(), "pronosticosGratuitosImages");
+    const listResult = await listAll(storageRef);
+    console.log("List of Images: ", listResult); // Debug
+
+    const urls = await Promise.all(
+      listResult.items.map(async (item) => await getDownloadURL(item))
+    );
+    console.log("Image URLs: ", urls); // Debug
+    setImageUrls(urls);
+    setImageUrl(getRandomImage(urls));
+  };
+
+  const getRandomImage = (urls: string[]) => {
+    const randomIndex = Math.floor(Math.random() * urls.length);
+    console.log("Random Image Index: ", randomIndex); // Debug
+    return urls[randomIndex];
+  };
+
+  useEffect(() => {
+    fetchImageUrls();
+  }, []);
+
+
+  /**
+ * Función para buscar imágenes en Google Images.
+ * @param query - Nombre del equipo u otro término de búsqueda
+ * @returns La URL de la primera imagen encontrada o un mensaje de error
+ */
+  async function buscarImagenEnGoogle(query: string): Promise<string | null> {
+    try {
+      const url = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(query)}&searchType=image&num=1`;
+
+      const response = await axios.get(url);
+      const items = response.data.items;
+
+      if (items && items.length > 0) {
+        // Retorna la URL de la primera imagen
+        return items[0].link;
+      } else {
+        console.error('No se encontraron imágenes.');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error al buscar la imagen:', error);
+      return null;
+    }
+  }
 
   const generarMensaje = async () => {
     const systemPrompt = `
@@ -98,6 +174,16 @@ export default function NuevaApuesta() {
       });
 
       setMessage(response.choices[0].message?.content.trim());
+
+      // Search for an image using the Google API
+      const query = `${equipoA} vs ${equipoB}`;
+      const imagenPartidoGoogleAPIUrl = await buscarImagenEnGoogle(query);
+      if (imagenPartidoGoogleAPIUrl) {
+        setImagenPartidoGoogleAPIUrl(imagenPartidoGoogleAPIUrl);
+        console.log(`Imagen encontrada: ${imagenPartidoGoogleAPIUrl}`);
+      } else {
+        console.log('No se encontró ninguna imagen.');
+      }
     } catch (error) {
       console.error("Error generating message:", error);
     } finally {
@@ -105,28 +191,33 @@ export default function NuevaApuesta() {
     }
   };
 
+
   const enviarATelegram = async () => {
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
     if (message) {
-
       try {
-        // Aquí deberías implementar la lógica para enviar el mensaje al canal de Telegram
-        // Esto podría implicar una llamada a una API de tu backend que maneje el envío
+
+        //Envio imagen de Apuesta Gratuita a telegram
+        const photoUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
+        await axios.post(photoUrl, {
+          chat_id: TELEGRAM_CHAT_ID,
+          photo: imageUrl,
+        });
+
+        //Envio de imagen sobre el partido obtenida de la API de Google a telegram
+        await axios.post(photoUrl, {
+          chat_id: TELEGRAM_CHAT_ID,
+          photo: imagenPartidoGoogleAPIUrl,
+        });
+
+        //lógica para enviar el mensaje al canal de Telegram
         await axios.post(url, {
           chat_id: TELEGRAM_CHAT_ID,
           text: message,
         });
 
-        //Envio de una imagen a telegram
-        /*const photoUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
-        await axios.post(photoUrl, {
-          chat_id: TELEGRAM_CHAT_ID,
-          photo: data.imageUrl,
-        });*/
-
         console.log("Mensaje enviado a Telegram:", message);
-        alert("Mensaje enviado correctamente al canal!"); // Pop-up de confirmación
-
+        alert("Mensaje enviado correctamente al canal!");
       } catch (error) {
         console.error("Error enviando mensaje a Telegram:", error);
       }
@@ -149,6 +240,25 @@ export default function NuevaApuesta() {
       <h1 className="text-2xl font-bold mb-6 text-blue-600">Generador de Mensajes de Apuestas</h1>
 
       <div className="w-full max-w-md p-4 bg-white rounded-lg shadow-md space-y-4">
+
+        <div className="relative w-full h-48 mb-2">
+          <Image
+            src={imageUrl}
+            alt="User"
+            width={500}
+            height={200}
+            onClick={() => setImageUrl(getRandomImage(imageUrls))}
+            className="w-full h-full"
+          />
+          <button
+            onClick={() => setImageUrl(getRandomImage(imageUrls))}
+            className="absolute right-0 top-1/2 transform -translate-y-1/2 p-2 bg-gray-500 text-white rounded-xl hover:bg-blue-600 transition h-full"
+            aria-label="Refresh Image"
+          >
+            🔄
+          </button>
+        </div>
+
         <input
           type="text"
           placeholder="Equipo A"
@@ -221,8 +331,17 @@ export default function NuevaApuesta() {
           </div>
         )}
 
-        {message && !loading && (
+        {message && !loading && imagenPartidoGoogleAPIUrl && (
           <div className="w-full max-w-md p-4 mt-6 bg-green-50 border border-green-300 rounded-lg">
+
+            <Image
+              src={imagenPartidoGoogleAPIUrl}
+              alt="User"
+              width={500}
+              height={200}
+              className="w-full h-full"
+            />
+
             <h2 className="text-lg font-semibold mb-2 text-green-700">Mensaje Generado:</h2>
             <textarea
               ref={textareaRef}
