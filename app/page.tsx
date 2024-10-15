@@ -142,11 +142,10 @@ export default function Page() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8 bg-gray-100">
-      <h1 className="text-3xl font-semibold text-gray-800">
-        BettingExperts Latino
-      </h1>
-      <div className="flex flex-col items-center bg-white shadow-lg rounded-lg p-6 mt-6 w-full max-w-md">
+    <main className="flex min-h-screen flex-col items-center justify-center p-2 bg-gray-100">
+      <h1 className="text-2xl font-bold text-gray-500">BetExperts Latino</h1>
+
+      <div className="flex flex-col items-center bg-white shadow-lg rounded-lg p-6 mt-4 w-full max-w-md">
         <Calendar
           aria-label="Date (Max Date Value)"
           defaultValue={today(getLocalTimeZone())}

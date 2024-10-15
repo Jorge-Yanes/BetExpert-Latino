@@ -31,9 +31,9 @@ export default function RootLayout({
         <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <nav className="flex space-x-4 p-4 bg-gray-200">
-          <Link href="/">Programar Mensajes Buenos Dias</Link>
-          <Link href="/nuevaApuesta">Nueva Apuesta</Link> {/* Enlace a la segunda pestaña */}
+        <nav className="flex space-x-2 p-2 bg-gray-200">
+          <Link href="/" className="p-2 border-b-2 border-transparent hover:border-blue-500 transition duration-200">Programar Mensajes Buenos Dias</Link>
+          <Link href="/nuevaApuesta" className="p-2 border-b-2 border-transparent hover:border-blue-500 transition duration-200">Nueva Apuesta</Link> {/* Enlace a la segunda pestaña */}
         </nav>
         {children}
       </body>
