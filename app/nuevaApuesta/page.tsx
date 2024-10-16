@@ -50,6 +50,8 @@ export default function NuevaApuesta() {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [imageUrl, setImageUrl] = useState<string>("");
   const [imagenPartidoGoogleAPIUrl, setImagenPartidoGoogleAPIUrl] = useState<string>("");
+  const [googleImageUrls, setGoogleImageUrls] = useState<string[]>([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
 
   const fetchImageUrls = async () => {
     const storageRef = ref(getStorage(), "pronosticosGratuitosImages");
@@ -74,29 +76,32 @@ export default function NuevaApuesta() {
     fetchImageUrls();
   }, []);
 
-
   /**
- * Función para buscar imágenes en Google Images.
- * @param query - Nombre del equipo u otro término de búsqueda
- * @returns La URL de la primera imagen encontrada o un mensaje de error
- */
-  async function buscarImagenEnGoogle(query: string): Promise<string | null> {
+   * Función para buscar imágenes en Google Images.
+   * @param query - Nombre del equipo u otro término de búsqueda
+   * @returns La URL de la primera imagen encontrada o un mensaje de error
+   */
+  async function buscarImagenEnGoogle(query: string): Promise<string[]> {
     try {
-      const url = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(query)}&searchType=image&num=1`;
+      const url = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(query)}&searchType=image&num=3`;
 
       const response = await axios.get(url);
       const items = response.data.items;
 
       if (items && items.length > 0) {
-        // Retorna la URL de la primera imagen
-        return items[0].link;
+        return items.map((item: any) => item.link);
       } else {
         console.error('No se encontraron imágenes.');
-        return null;
+        return [];
       }
     } catch (error) {
-      console.error('Error al buscar la imagen:', error);
-      return null;
+      if (axios.isAxiosError(error)) {
+        console.error('Error al buscar la imagen:', error.message);
+        console.error('Detalles del error:', error.response?.data);
+      } else {
+        console.error('Error inesperado:', error);
+      }
+      return [];
     }
   }
 
@@ -175,17 +180,38 @@ export default function NuevaApuesta() {
 
       setMessage(response.choices[0].message?.content.trim());
 
-      // Search for an image using the Google API
-      const query = `${equipoA} vs ${equipoB}`;
-      const imagenPartidoGoogleAPIUrl = await buscarImagenEnGoogle(query);
-      if (imagenPartidoGoogleAPIUrl) {
-        setImagenPartidoGoogleAPIUrl(imagenPartidoGoogleAPIUrl);
-        console.log(`Imagen encontrada: ${imagenPartidoGoogleAPIUrl}`);
-      } else {
-        console.log('No se encontró ninguna imagen.');
+      // Realizar búsquedas de imágenes con diferentes consultas
+      const query1 = `${equipoA} vs ${equipoB}`;
+      const query2 = `${competencia}`;
+      const query3 = `jugadores de ${equipoA}`;
+      const query4 = `jugadores de ${equipoB}`;
+
+      console.log(query1);
+      console.log(query2);
+      console.log(query3);
+      console.log(query4);
+
+      try {
+        const [imagenes1, imagenes2, imagenes3, imagenes4] = await Promise.all([
+          buscarImagenEnGoogle(query1),
+          buscarImagenEnGoogle(query2),
+          buscarImagenEnGoogle(query3),
+          buscarImagenEnGoogle(query4),
+        ]);
+
+        const imagenesGoogleAPIUrls = [...imagenes1, ...imagenes2, ...imagenes3, ...imagenes4];
+        if (imagenesGoogleAPIUrls.length > 0) {
+          setGoogleImageUrls(imagenesGoogleAPIUrls);
+          setCurrentImageIndex(0);
+          console.log(`Imágenes encontradas: ${imagenesGoogleAPIUrls}`);
+        } else {
+          console.log('No se encontraron imágenes.');
+        }
+      } catch (error) {
+        console.error("Error al buscar imágenes:", error);
       }
     } catch (error) {
-      console.error("Error generating message:", error);
+      console.error("Error al generar el mensaje:", error);
     } finally {
       setLoading(false);
     }
@@ -229,11 +255,12 @@ export default function NuevaApuesta() {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
+    console.log("JORGE", textareaRef.current);
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto"; // Reset height
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`; // Set to scroll height
     }
-  }, [message]);
+  }, [message]); // Ensure this effect runs whenever `message` changes
 
   return (
     <div className="flex flex-col items-center justify-top min-h-screen p-2 bg-gray-100">
@@ -331,16 +358,29 @@ export default function NuevaApuesta() {
           </div>
         )}
 
-        {message && !loading && imagenPartidoGoogleAPIUrl && (
+        {message && !loading && googleImageUrls.length > 0 && (
           <div className="w-full max-w-md p-4 mt-6 bg-green-50 border border-green-300 rounded-lg">
-
             <Image
-              src={imagenPartidoGoogleAPIUrl}
+              src={googleImageUrls[currentImageIndex]}
               alt="User"
               width={500}
               height={200}
               className="w-full h-full"
             />
+            <div className="flex justify-between mt-2">
+              <button
+                onClick={() => setCurrentImageIndex((prevIndex) => (prevIndex > 0 ? prevIndex - 1 : googleImageUrls.length - 1))}
+                className="w-1/2 p-2 bg-blue-300 text-white hover:bg-gray-200 transition rounded-none"
+              >
+                ⬅️
+              </button>
+              <button
+                onClick={() => setCurrentImageIndex((prevIndex) => (prevIndex < googleImageUrls.length - 1 ? prevIndex + 1 : 0))}
+                className="w-1/2 p-2 bg-blue-300 text-white hover:bg-gray-200 transition rounded-none"
+              >
+                ➡️
+              </button>
+            </div>
 
             <h2 className="text-lg font-semibold mb-2 text-green-700">Mensaje Generado:</h2>
             <textarea
@@ -348,7 +388,7 @@ export default function NuevaApuesta() {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 resize-none overflow-hidden"
-              style={{ height: "auto" }}
+              style={{ height: "auto" }} // Ensure initial height is set to auto
             />
             <button
               onClick={enviarATelegram}
