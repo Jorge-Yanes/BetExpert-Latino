@@ -52,6 +52,12 @@ export default function NuevaApuesta() {
   const [googleImageUrls, setGoogleImageUrls] = useState<string[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
 
+  // Nuevos estados para el segundo partido
+  const [equipoC, setEquipoC] = useState<string>("");
+  const [equipoD, setEquipoD] = useState<string>("");
+  const [competencia2, setCompetencia2] = useState<string>("");
+  const [showSecondMatch, setShowSecondMatch] = useState<boolean>(false); // Estado para controlar la visibilidad
+
   const fetchImageUrls = async () => {
     const storageRef = ref(getStorage(), "pronosticosGratuitosImages");
     const listResult = await listAll(storageRef);
@@ -129,8 +135,8 @@ export default function NuevaApuesta() {
          - Incluye claramente todos los datos del partido en formato estructurado.
 
       # Entrada de Ejemplo:
-        - Partido: {equipoA} vs {equipoB}
-        - Competición: {competencia}
+        - Partido: {equipoA} vs {equipoB} y {equipoC} vs {equipoD}
+        - Competición: {competencia} y {competencia2}
         - Cuota: {cuota}
         - Stake: {stake}
         - Resultado del análisis: {analisis}
@@ -138,11 +144,12 @@ export default function NuevaApuesta() {
 
 
       # Ejemplo de salida 1:
-
       🌞 ¡Saludos equipo! Hoy salimos al campo llenos de energía y con determinación para romper la jornada. Nos enfrentamos a un emocionante partido entre {equipoA} y {equipoB}, y estamos listos para aprovechar nuestra predicción ganadora. 🏆
+      🌞 ¡Saludos equipo! Hoy salimos al campo llenos de energía y con determinación para romper la jornada. Nos enfrentamos a un emocionante partido entre {equipoA} y {equipoB}, y {equipoC} y {equipoD}, y estamos listos para aprovechar nuestra predicción ganadora. 🏆
 
       🍀 Apuesta Gratuita 🍀  
       🇪🇸 {competencia}  
+      🇪🇸 {competencia} y {competencia2}  
       🔘 STAKE {stake} ⚡️Cuota {cuota}⚡️  
       💡 Recomendamos: {recomendacion}
 
@@ -155,8 +162,8 @@ export default function NuevaApuesta() {
     `;
 
     const userInput = `
-      Partido: ${equipoA} vs ${equipoB}
-      Competición: ${competencia}
+      Partido: ${equipoA} vs ${equipoB} ${showSecondMatch ? `y ${equipoC} vs ${equipoD}` : ""}
+      Competición: ${competencia} ${showSecondMatch ? `y ${competencia2}` : ""}
       Cuota: ${cuota}
       Stake: ${stake}
       Análisis: ${analisis}
@@ -182,27 +189,25 @@ export default function NuevaApuesta() {
       // Realizar búsquedas de imágenes con diferentes consultas
       const query1 = `${equipoA} vs ${equipoB}`;
       const query2 = `${competencia}`;
-      const query3 = `jugadores de ${equipoA}`;
-      const query4 = `jugadores de ${equipoB}`;
+      const queries = [query1, query2]; // Inicializar con las consultas del primer partido
 
-      console.log(query1);
-      console.log(query2);
-      console.log(query3);
-      console.log(query4);
+      if (showSecondMatch) {
+        const query3 = `${equipoC} vs ${equipoD}`;
+        const query4 = `${competencia2}`;
+        queries.push(query3, query4); // Agregar consultas del segundo partido
+        queries.push(`jugadores de ${equipoC}`, `jugadores de ${equipoD}`); // Agregar jugadores del segundo partido
+      }
+      queries.push(`jugadores de ${equipoA}`, `jugadores de ${equipoB}`); // Agregar jugadores del primer partido
+
+      console.log(queries);
 
       try {
-        const [imagenes1, imagenes2, imagenes3, imagenes4] = await Promise.all([
-          buscarImagenEnGoogle(query1),
-          buscarImagenEnGoogle(query2),
-          buscarImagenEnGoogle(query3),
-          buscarImagenEnGoogle(query4),
-        ]);
-
-        const imagenesGoogleAPIUrls = [...imagenes1, ...imagenes2, ...imagenes3, ...imagenes4];
-        if (imagenesGoogleAPIUrls.length > 0) {
-          setGoogleImageUrls(imagenesGoogleAPIUrls);
+        const imagenesGoogleAPIUrls = await Promise.all(queries.map(query => buscarImagenEnGoogle(query)));
+        const flattenedImages = imagenesGoogleAPIUrls.flat(); // Aplanar el array de imágenes
+        if (flattenedImages.length > 0) {
+          setGoogleImageUrls(flattenedImages);
           setCurrentImageIndex(0);
-          console.log(`Imágenes encontradas: ${imagenesGoogleAPIUrls}`);
+          console.log(`Imágenes encontradas: ${flattenedImages}`);
         } else {
           console.log('No se encontraron imágenes.');
         }
@@ -215,7 +220,6 @@ export default function NuevaApuesta() {
       setLoading(false);
     }
   };
-
 
   const enviarATelegram = async () => {
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
@@ -259,7 +263,7 @@ export default function NuevaApuesta() {
 
   return (
     <div className="flex flex-col items-center justify-top min-h-screen p-2 bg-gray-100">
-      <h1 className="text-2xl font-bold mb-6 text-blue-600">Generador de Mensajes de Apuestas</h1>
+      <h1 className="text-xl font-bold mb-6 text-blue-600">Generador de Pronósticos Gratuitos</h1>
 
       <div className="w-full max-w-md p-4 bg-white rounded-lg shadow-md space-y-4">
 
@@ -297,11 +301,48 @@ export default function NuevaApuesta() {
         />
         <input
           type="text"
-          placeholder="Competicion"
+          placeholder="Competición"
           value={competencia}
           onChange={(e) => setCompetencia(e.target.value)}
           className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+        
+        {/* Botón para mostrar los campos del segundo partido */}
+        <button
+          onClick={() => setShowSecondMatch(!showSecondMatch)}
+          className={`w-full py-1 rounded-md transition-colors ${
+            showSecondMatch ? "bg-red-300" : "bg-green-300"
+          } text-white hover:bg-opacity-80`}        >
+          {showSecondMatch ? "Ocultar Segundo Partido" : "Añadir Segundo Partido"}
+        </button>
+
+        {/* Campos del segundo partido */}
+        {showSecondMatch && (
+          <>
+            <input
+              type="text"
+              placeholder="Equipo C"
+              value={equipoC}
+              onChange={(e) => setEquipoC(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <input
+              type="text"
+              placeholder="Equipo D"
+              value={equipoD}
+              onChange={(e) => setEquipoD(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <input
+              type="text"
+              placeholder="Competición 2"
+              value={competencia2}
+              onChange={(e) => setCompetencia2(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </>
+        )}
+
         <div className="flex space-x-4">
           <input
             type="text"

@@ -88,11 +88,9 @@ export default function Page() {
       setImageUrl(data.imageUrl);
     } else {
       console.log("No document found for the selected date"); // Debug
-      //await getFixturesByDate(dateKey); // Llama a la función para obtener los fixtures
       setImageUrl(getRandomImage());
+      //await getFixturesByDate(dateKey); // Llama a la función para obtener los fixtures
       await getFixturesByDate('2022-10-19'); // Llama a la función para obtener los fixtures
-      // Llama a generarMensaje después de obtener los datos
-      //await generarMensaje();
     }
 
     // Verificar los valores antes de llamar a generarMensaje
@@ -259,7 +257,7 @@ export default function Page() {
         });
         console.log("Mensaje guardado correctamente y programado a", dateKey, scheduledTime);
         setMessage("Data saved successfully!");
-        alert("Mensaje guardado correctamente y programado a"); // Pop-up de confirmación
+        alert("Mensaje guardado correctamente y programado a `${dateKey}` "); // Pop-up de confirmación
       } catch (error) {
         console.log("Error al guardar los datos en Firestore: ", error); // Debug de errores
         console.error("Error details: ", JSON.stringify(error, null, 2));
@@ -324,12 +322,17 @@ export default function Page() {
           style={{ height: "auto" }} // Ensure initial height is set to auto
         />
 
+        <p className="mt-2 text-gray-600">
+          Programado para: {date.toString().split("T")[0]} a las 09:{Math.floor(Math.random() * 60).toString().padStart(2, '0')} horas
+        </p>
         <button
           onClick={handleSave}
           className="mt-4 w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition"
         >
-          Save
+          Guardar y Programar Envio
         </button>
+
+
 
         {message && <p className="mt-4 text-green-600">{message}</p>}
       </div>

@@ -33,7 +33,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <nav className="flex space-x-2 p-2 bg-gray-200">
           <Link href="/" className="p-2 border-b-2 border-transparent hover:border-blue-500 transition duration-200">Programar Mensajes Buenos Dias</Link>
-          <Link href="/nuevaApuesta" className="p-2 border-b-2 border-transparent hover:border-blue-500 transition duration-200">Nueva Apuesta</Link> {/* Enlace a la segunda pestaña */}
+          <Link href="/nuevaApuesta" className="p-2 border-b-2 border-transparent hover:border-blue-500 transition duration-200">Nuevo Pronostico Gratuito</Link> {/* Enlace a la segunda pestaña */}
         </nav>
         {children}
       </body>
