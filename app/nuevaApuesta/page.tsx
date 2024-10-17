@@ -49,7 +49,6 @@ export default function NuevaApuesta() {
   const [message, setMessage] = useState<string>("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [imageUrl, setImageUrl] = useState<string>("");
-  const [imagenPartidoGoogleAPIUrl, setImagenPartidoGoogleAPIUrl] = useState<string>("");
   const [googleImageUrls, setGoogleImageUrls] = useState<string[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
 
@@ -220,35 +219,31 @@ export default function NuevaApuesta() {
 
   const enviarATelegram = async () => {
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-    if (message) {
-      try {
+    try {
 
-        //Envio imagen de Apuesta Gratuita a telegram
+        // Envio imagen de Apuesta Gratuita a telegram
         const photoUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
         await axios.post(photoUrl, {
-          chat_id: TELEGRAM_CHAT_ID,
-          photo: imageUrl,
+            chat_id: TELEGRAM_CHAT_ID,
+            photo: imageUrl,
         });
 
-        //Envio de imagen sobre el partido obtenida de la API de Google a telegram
+        // Envio de imagen sobre el partido obtenida de la API de Google a telegram
         await axios.post(photoUrl, {
-          chat_id: TELEGRAM_CHAT_ID,
-          photo: imagenPartidoGoogleAPIUrl,
+            chat_id: TELEGRAM_CHAT_ID,
+            photo: googleImageUrls[currentImageIndex], // Cambiado para usar la imagen seleccionada de Google
         });
 
-        //lógica para enviar el mensaje al canal de Telegram
+        // lógica para enviar el mensaje al canal de Telegram
         await axios.post(url, {
-          chat_id: TELEGRAM_CHAT_ID,
-          text: message,
+            chat_id: TELEGRAM_CHAT_ID,
+            text: message,
         });
 
         console.log("Mensaje enviado a Telegram:", message);
         alert("Mensaje enviado correctamente al canal!");
-      } catch (error) {
+    } catch (error) {
         console.error("Error enviando mensaje a Telegram:", error);
-      }
-    } else {
-      console.log("ERROR AL ENVIAR: MESAJE VACIO")
     }
   };
 
