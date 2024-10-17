@@ -55,6 +55,7 @@ export default function Page() {
   const [equipoA, setEquipoA] = useState<string>("");
   const [equipoB, setEquipoB] = useState<string>("");
   const [competencia, setCompetencia] = useState<string>("");
+  const [partidos, setPartidos] = useState<{ equipoA: string; equipoB: string; competencia: string }[]>([]);
 
   // Fetch user data from Telegram Web App
   useEffect(() => {
@@ -88,10 +89,10 @@ export default function Page() {
     } else {
       console.log("No document found for the selected date"); // Debug
       //await getFixturesByDate(dateKey); // Llama a la función para obtener los fixtures
-      await getFixturesByDate('2022-10-19'); // Llama a la función para obtener los fixtures
       setImageUrl(getRandomImage());
+      await getFixturesByDate('2022-10-19'); // Llama a la función para obtener los fixtures
       // Llama a generarMensaje después de obtener los datos
-      await generarMensaje();
+      //await generarMensaje();
     }
 
     // Verificar los valores antes de llamar a generarMensaje
@@ -108,43 +109,44 @@ export default function Page() {
 
   // Función para obtener los partidos en una fecha específica
   const getFixturesByDate = async (date: string) => {
-    // const leagues = ['39', '140', '135', '78', '2', '1', '13', '61', '3', '71']; // IDs de las ligas: Premier League, La Liga, Serie A, Champions League, Bundesliga, Copa del Mundo, Copa Libertadores, Ligue 1, UEFA Europa League, Brasileirão
-    const leagues = ['140']; // IDs de las ligas: Premier League, La Liga, Serie A, Champions League, Bundesliga, Copa del Mundo, Copa Libertadores, Ligue 1, UEFA Europa League, Brasileirão
+    const leagues = ['39', '140', '135', '78', '2', '1', '13', '61', '3', '71']; // IDs de las ligas: Premier League, La Liga, Serie A, Champions League, Bundesliga, Copa del Mundo, Copa Libertadores, Ligue 1, UEFA Europa League, Brasileirão
+    //const leagues = ['140']; // IDs de las ligas
+
     try {
+      const allFixtures = []; // Array para almacenar todos los partidos
       for (const league of leagues) {
         const response = await axios.get(API_URL, {
           headers: {
-            'x-apisports-key': API_KEY,  // Clave API
+            'x-apisports-key': API_KEY,
             'Content-Type': 'application/json',
           },
           params: {
-            date: date,           // Fecha específica en formato YYYY-MM-DD
-            league: league,       // Llamada por cada liga
-            season: '2022'       // Temporada
+            date: date,
+            league: league,
+            season: '2022',
           },
         });
 
-        // Procesar la respuesta
         const fixtures = response.data.response;
 
         fixtures.forEach((fixture: any) => {
           const homeTeam = fixture.teams.home.name;
           const awayTeam = fixture.teams.away.name;
-          const matchTime = fixture.fixture.date;
-          console.log(`${homeTeam} vs ${awayTeam} - ${matchTime}`); // Imprime la información de los partidos
+          const competition = fixture.league.name; // Cambiado a competencia
+          console.log(`${homeTeam} vs ${awayTeam} - ${competition}`); // Imprime la información de los partidos
 
-          // Asigna los valores a las variables de estado
-          setEquipoA(homeTeam);
-          setEquipoB(awayTeam);
-          setCompetencia(fixture.league.name); // Asumiendo que el nombre de la liga está aquí
+          // Agregar el partido al array
+          allFixtures.push({ equipoA: homeTeam, equipoB: awayTeam, competencia: competition });
         });
       }
+      setPartidos(allFixtures); // Guardar todos los partidos en el estado
+      await generarMensaje(allFixtures); // Pasar la lista de partidos a generarMensaje
     } catch (error) {
       console.error('Error fetching fixtures:', error);
     }
   };
 
-  const generarMensaje = async () => {
+  const generarMensaje = async (partidos: { equipoA: string; equipoB: string; competencia: string }[]) => {
     const systemPrompt = `
         Yo soy tipster deportivo y tengo un canal donde comparto análisis y pronósticos de partidos de fútbol. Genera un mensaje para mi canal de Telegram motivacional de buenos días como un tipster especializado en apuestas deportivas de futbol. Usa los datos específicos de los partidos del día que te serán indicados y crea un mensaje que siga el mismo estilo de los ejemplos proporcionados.
 
@@ -166,8 +168,7 @@ export default function Page() {
             El mensaje debe ser un párrafo motivacional breve, que incluya un saludo matutino, un buen resumen de los partidos mas importantes del día con un enfoque positivo,  y un cierre optimista.
 
               # Entrada de Ejemplo:
-                    - Partido: {equipoA} vs {equipoB}
-                    - Liga o Competicion: {competencia}
+                    - Partido: {equipoA} vs {equipoB} <> Liga o Competicion: {competencia}
 
             # Ejemplos
 
@@ -177,21 +178,17 @@ export default function Page() {
                   La jornada promete con varios encuentros clave, y juntos lo lograremos con el análisis preciso que hemos preparado. ¡A por ello!
                   ¡Con enfoque y dedicación, hoy conquistamos las apuestas!
 
-
-
             # Notas
 
             - Asegúrate de personalizar los mensajes de acuerdo con los detalles específicos de cada partido.
             - Usa un lenguaje coherente y enérgico para replicar fielmente el estilo marcado en los ejemplos.
     `;
 
-    const userInput = `
-      Partido: ${equipoA} vs ${equipoB}
-      Liga o Competicion:: ${competencia}
-    `;
+    const userInput = partidos.map(partido => `Partido: ${partido.equipoA} vs ${partido.equipoB} <> Liga o Competicion: ${partido.competencia}`).join('\n');
+
     setLoading(true);
     try {
-      console.log("JORGE " , userInput);
+      console.log("JORGE ", userInput);
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
@@ -199,7 +196,6 @@ export default function Page() {
           { role: "user", content: userInput },
         ],
         temperature: 0.7,
-      //  max_tokens: 300,
         top_p: 1,
         frequency_penalty: 0,
         presence_penalty: 0,
@@ -281,7 +277,6 @@ export default function Page() {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
-    console.log("JORGE", textareaRef.current);
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto"; // Reset height
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`; // Set to scroll height
