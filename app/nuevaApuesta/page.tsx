@@ -8,6 +8,8 @@ import axios from 'axios';
 import Image from "next/image";
 import { getStorage, ref, listAll, getDownloadURL } from "firebase/storage";
 import dotenv from 'dotenv';
+import leagues from '../../data/leagues.json';
+import leaguesIDName from '../../data/leaguesIDName.json';
 
 // Cargar las variables de entorno
 dotenv.config();
@@ -36,6 +38,31 @@ const openai = new OpenAI({
   apiKey: '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',
   dangerouslyAllowBrowser: true
 });
+
+// Define the expected structure of the leagues data
+/*interface LeagueResponse {
+  response: {
+    league: {
+      id: number;
+      name: string;
+      type: string;
+    };
+    country: {
+      name: string;
+    };
+  }[];
+}*/
+
+// Convertir el mapa a un array de nombres asegurando que son cadenas
+const competiciones = Object.values(leaguesIDName).map(value => String(value));
+
+// Lista de equipos (puedes reemplazar esto con tus datos reales)
+const equipos = ["Equipo A", "Equipo B", "Equipo C", "Equipo D"];
+
+// Función para filtrar opciones
+const filterOptions = (options: string[], query: string) => {
+  return options.filter(option => option.toLowerCase().includes(query.toLowerCase()));
+};
 
 export default function NuevaApuesta() {
   const [loading, setLoading] = useState(false);
@@ -79,6 +106,30 @@ export default function NuevaApuesta() {
 
   useEffect(() => {
     fetchImageUrls();
+
+   /* // Creamos el mapa para almacenar los resultados
+    const leagueMap = new Map();
+    const jsonData = leagues as LeagueResponse; // Assert the type here
+    const leagueJson: { [key: number]: string } = {}; // Objeto para almacenar el JSON
+
+    // Recorremos cada elemento de la respuesta
+    jsonData.response.forEach(item => {
+      const leagueId = item.league.id;  // Key: ID de la liga
+      const leagueInfo = `${item.country.name} - ${item.league.name} - ${item.league.type}`;  // Value: country.name - league.name - league.type
+
+      // Guardamos en el mapa
+      leagueMap.set(leagueId, leagueInfo);
+      leagueJson[leagueId] = leagueInfo; // Guardamos en el objeto JSON
+    });
+
+    // Convertir el objeto a JSON
+    const leagueJsonString = JSON.stringify(leagueJson, null, 2);
+    console.log("JSON de ligas:", leagueJsonString); // Muestra el JSON en la consola*/
+
+    // Muestra el mapa en la consola
+    /*leagueMap.forEach((value, key) => {
+      console.log(`ID: ${key}, Info: ${value}`);
+    });*/
   }, []);
 
   /**
@@ -225,29 +276,29 @@ export default function NuevaApuesta() {
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
     try {
 
-        // Envio imagen de Apuesta Gratuita a telegram
-        const photoUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
-        await axios.post(photoUrl, {
-            chat_id: TELEGRAM_CHAT_ID,
-            photo: imageUrl,
-        });
+      // Envio imagen de Apuesta Gratuita a telegram
+      const photoUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
+      await axios.post(photoUrl, {
+        chat_id: TELEGRAM_CHAT_ID,
+        photo: imageUrl,
+      });
 
-        // Envio de imagen sobre el partido obtenida de la API de Google a telegram
-        await axios.post(photoUrl, {
-            chat_id: TELEGRAM_CHAT_ID,
-            photo: googleImageUrls[currentImageIndex], // Cambiado para usar la imagen seleccionada de Google
-        });
+      // Envio de imagen sobre el partido obtenida de la API de Google a telegram
+      await axios.post(photoUrl, {
+        chat_id: TELEGRAM_CHAT_ID,
+        photo: googleImageUrls[currentImageIndex], // Cambiado para usar la imagen seleccionada de Google
+      });
 
-        // lógica para enviar el mensaje al canal de Telegram
-        await axios.post(url, {
-            chat_id: TELEGRAM_CHAT_ID,
-            text: message,
-        });
+      // lógica para enviar el mensaje al canal de Telegram
+      await axios.post(url, {
+        chat_id: TELEGRAM_CHAT_ID,
+        text: message,
+      });
 
-        console.log("Mensaje enviado a Telegram:", message);
-        alert("Mensaje enviado correctamente al canal!");
+      console.log("Mensaje enviado a Telegram:", message);
+      alert("Mensaje enviado correctamente al canal!");
     } catch (error) {
-        console.error("Error enviando mensaje a Telegram:", error);
+      console.error("Error enviando mensaje a Telegram:", error);
     }
   };
 
@@ -261,10 +312,11 @@ export default function NuevaApuesta() {
     }
   }, [message]); // Ensure this effect runs whenever `message` changes
 
+
+
   return (
     <div className="flex flex-col items-center justify-top min-h-screen p-2 bg-gray-100">
       <h1 className="text-xl font-bold mb-6 text-blue-600">Generador de Pronósticos Gratuitos</h1>
-
       <div className="w-full max-w-md p-4 bg-white rounded-lg shadow-md space-y-4">
 
         <div className="relative w-full h-48 mb-2">
@@ -292,6 +344,17 @@ export default function NuevaApuesta() {
           onChange={(e) => setEquipoA(e.target.value)}
           className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+        {/* Autocompletado para Equipo A */}
+        {equipoA && (
+          <ul className="absolute bg-white border border-gray-300 rounded-md w-full z-10">
+            {filterOptions(equipos, equipoA).map((equipo) => (
+              <li key={equipo} onClick={() => setEquipoA(equipo)} className="p-2 hover:bg-gray-200 cursor-pointer">
+                {equipo}
+              </li>
+            ))}
+          </ul>
+        )}
+
         <input
           type="text"
           placeholder="Equipo B"
@@ -299,6 +362,17 @@ export default function NuevaApuesta() {
           onChange={(e) => setEquipoB(e.target.value)}
           className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+        {/* Autocompletado para Equipo B */}
+        {equipoB && (
+          <ul className="absolute bg-white border border-gray-300 rounded-md w-full z-10">
+            {filterOptions(equipos, equipoB).map((equipo) => (
+              <li key={equipo} onClick={() => setEquipoB(equipo)} className="p-2 hover:bg-gray-200 cursor-pointer">
+                {equipo}
+              </li>
+            ))}
+          </ul>
+        )}
+
         <input
           type="text"
           placeholder="Competición"
@@ -306,13 +380,22 @@ export default function NuevaApuesta() {
           onChange={(e) => setCompetencia(e.target.value)}
           className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        
+        {/* Autocompletado para Competición */}
+        {competencia && (
+          <ul className="absolute bg-white border border-gray-300 rounded-md w-full z-10">
+            {filterOptions(competiciones, competencia).map((comp) => (
+              <li key={comp} onClick={() => setCompetencia(comp)} className="p-2 hover:bg-gray-200 cursor-pointer">
+                {comp}
+              </li>
+            ))}
+          </ul>
+        )}
+
         {/* Botón para mostrar los campos del segundo partido */}
         <button
           onClick={() => setShowSecondMatch(!showSecondMatch)}
-          className={`w-full py-1 rounded-md transition-colors ${
-            showSecondMatch ? "bg-red-300" : "bg-green-300"
-          } text-white hover:bg-opacity-80`}        >
+          className={`w-full py-1 rounded-md transition-colors ${showSecondMatch ? "bg-red-300" : "bg-green-300"} text-white hover:bg-opacity-80`}
+        >
           {showSecondMatch ? "Ocultar Segundo Partido" : "Añadir Segundo Partido"}
         </button>
 
@@ -326,6 +409,17 @@ export default function NuevaApuesta() {
               onChange={(e) => setEquipoC(e.target.value)}
               className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            {/* Autocompletado para Equipo C */}
+            {equipoC && (
+              <ul className="absolute bg-white border border-gray-300 rounded-md w-full z-10">
+                {filterOptions(equipos, equipoC).map((equipo) => (
+                  <li key={equipo} onClick={() => setEquipoC(equipo)} className="p-2 hover:bg-gray-200 cursor-pointer">
+                    {equipo}
+                  </li>
+                ))}
+              </ul>
+            )}
+
             <input
               type="text"
               placeholder="Equipo D"
@@ -333,6 +427,17 @@ export default function NuevaApuesta() {
               onChange={(e) => setEquipoD(e.target.value)}
               className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            {/* Autocompletado para Equipo D */}
+            {equipoD && (
+              <ul className="absolute bg-white border border-gray-300 rounded-md w-full z-10">
+                {filterOptions(equipos, equipoD).map((equipo) => (
+                  <li key={equipo} onClick={() => setEquipoD(equipo)} className="p-2 hover:bg-gray-200 cursor-pointer">
+                    {equipo}
+                  </li>
+                ))}
+              </ul>
+            )}
+
             <input
               type="text"
               placeholder="Competición 2"
@@ -340,6 +445,16 @@ export default function NuevaApuesta() {
               onChange={(e) => setCompetencia2(e.target.value)}
               className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            {/* Autocompletado para Competición 2 */}
+            {competencia2 && (
+              <ul className="absolute bg-white border border-gray-300 rounded-md w-full z-10">
+                {filterOptions(competiciones, competencia2).map((comp) => (
+                  <li key={comp} onClick={() => setCompetencia2(comp)} className="p-2 hover:bg-gray-200 cursor-pointer">
+                    {comp}
+                  </li>
+                ))}
+              </ul>
+            )}
           </>
         )}
 
@@ -361,6 +476,7 @@ export default function NuevaApuesta() {
             inputMode="decimal"
           />
         </div>
+
         <textarea
           placeholder="Análisis"
           value={analisis}
