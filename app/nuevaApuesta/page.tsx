@@ -4,18 +4,20 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { useState, useEffect, useRef } from "react";
 import OpenAI from "openai";
-import axios from 'axios';
+import axios from "axios";
 import Image from "next/image";
 import { getStorage, ref, listAll, getDownloadURL } from "firebase/storage";
-import dotenv from 'dotenv';
-import leagues from '../../data/leagues.json';
-import leaguesIDName from '../../data/leaguesIDName.json';
+import dotenv from "dotenv";
+import leagues from "../../data/leagues.json";
+import leaguesIDName from "../../data/leaguesIDName.json";
+import { setDoc, doc } from "firebase/firestore";
+import Select from 'react-select';
 
 // Cargar las variables de entorno
 dotenv.config();
 
-const GOOGLE_API_KEY = 'AIzaSyBqBYaTcKqtgCtYgTeRxZZZel30IoLxL1Q';
-const GOOGLE_CX = 'e3eff5474587546a7';
+const GOOGLE_API_KEY = "AIzaSyBqBYaTcKqtgCtYgTeRxZZZel30IoLxL1Q";
+const GOOGLE_CX = "e3eff5474587546a7";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBGBlSmL5WDTCnjjzgbMdmwNYZmw4Y3Fgk",
@@ -33,44 +35,24 @@ const db = getFirestore();
 const TELEGRAM_BOT_TOKEN = "8106664155:AAEbLO9kcy0ehQyxvztLtw8vIntwSszkkjY"; // Reemplaza esto con tu token de bot de Telegram
 const TELEGRAM_CHAT_ID = "-1002356737756"; // Reemplaza esto con el chat ID donde quieres enviar el mensaje
 
+const API_FOOTBALL_URL = "https://v3.football.api-sports.io/fixtures";
+const API_FOOTBALL_KEY = "5608c120367cf9967e9d177199cc2da7"; // Reemplaza con tu clave de API
+
 // Create an instance of OpenAIApi
 const openai = new OpenAI({
-  apiKey: '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',
-  dangerouslyAllowBrowser: true
+  apiKey:
+    "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",
+  dangerouslyAllowBrowser: true,
 });
 
-// Define the expected structure of the leagues data
-/*interface LeagueResponse {
-  response: {
-    league: {
-      id: number;
-      name: string;
-      type: string;
-    };
-    country: {
-      name: string;
-    };
-  }[];
-}*/
-
-// Convertir el mapa a un array de nombres asegurando que son cadenas
-const competiciones = Object.values(leaguesIDName).map(value => String(value));
-
-// Lista de equipos (puedes reemplazar esto con tus datos reales)
-const equipos = ["Equipo A", "Equipo B", "Equipo C", "Equipo D"];
-
-// Función para filtrar opciones
-const filterOptions = (options: string[], query: string) => {
-  return options.filter(option => option.toLowerCase().includes(query.toLowerCase()));
-};
 
 export default function NuevaApuesta() {
   const [loading, setLoading] = useState(false);
-  const [equipoA, setEquipoA] = useState<string>("");
-  const [equipoB, setEquipoB] = useState<string>("");
-  const [competencia, setCompetencia] = useState<string>("");
+  //const [competencia, setCompetencia] = useState<string>("");
+  //const [competencia2, setCompetencia2] = useState<string>("");
   const [cuota, setCuota] = useState<string>("");
   const [stake, setStake] = useState<string>("");
+  const [importe, setImporte] = useState<string>("");
   const [analisis, setAnalisis] = useState<string>("");
   const [recomendacion, setRecomendacion] = useState<string>("");
   const [message, setMessage] = useState<string>("");
@@ -78,58 +60,44 @@ export default function NuevaApuesta() {
   const [imageUrl, setImageUrl] = useState<string>("");
   const [googleImageUrls, setGoogleImageUrls] = useState<string[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
+  const [editedImageUrl, setEditedImageUrl] = useState<string>("");
 
   // Nuevos estados para el segundo partido
+  const [showSecondMatch, setShowSecondMatch] = useState<boolean>(false); // Estado para controlar la visibilidad
+  const [partidoAcabado, setPartidoAcabado] = useState<boolean>(false); // Estado para controlar la visibilidad
+  const [mensajeResultadoEnviado, setMensajeResultadoEnviado] = useState<boolean>(false); // Estado para controlar la visibilidad
+
+  const [partidos, setPartidos] = useState<any[]>([]);
+  const [partidos1, setPartidos1] = useState<any[]>([]);
+  const [selectedPartido1, setSelectedPartido1] = useState<any | null>(null);
+  const [selectedCompetencia1, setSelectedCompetencia1] = useState<any | null>(null);
+  const [equipoA, setEquipoA] = useState<string>("");
+  const [equipoB, setEquipoB] = useState<string>("");
+
+  const [partidos2, setPartidos2] = useState<any[]>([]);
+  const [selectedPartido2, setSelectedPartido2] = useState<any | null>(null);
+  const [selectedCompetencia2, setSelectedCompetencia2] = useState<any | null>(null);
   const [equipoC, setEquipoC] = useState<string>("");
   const [equipoD, setEquipoD] = useState<string>("");
-  const [competencia2, setCompetencia2] = useState<string>("");
-  const [showSecondMatch, setShowSecondMatch] = useState<boolean>(false); // Estado para controlar la visibilidad
 
   const fetchImageUrls = async () => {
     const storageRef = ref(getStorage(), "pronosticosGratuitosImages");
     const listResult = await listAll(storageRef);
-    console.log("List of Images: ", listResult); // Debug
 
     const urls = await Promise.all(
       listResult.items.map(async (item) => await getDownloadURL(item))
     );
-    console.log("Image URLs: ", urls); // Debug
     setImageUrls(urls);
     setImageUrl(getRandomImage(urls));
   };
 
   const getRandomImage = (urls: string[]) => {
     const randomIndex = Math.floor(Math.random() * urls.length);
-    console.log("Random Image Index: ", randomIndex); // Debug
     return urls[randomIndex];
   };
 
   useEffect(() => {
     fetchImageUrls();
-
-   /* // Creamos el mapa para almacenar los resultados
-    const leagueMap = new Map();
-    const jsonData = leagues as LeagueResponse; // Assert the type here
-    const leagueJson: { [key: number]: string } = {}; // Objeto para almacenar el JSON
-
-    // Recorremos cada elemento de la respuesta
-    jsonData.response.forEach(item => {
-      const leagueId = item.league.id;  // Key: ID de la liga
-      const leagueInfo = `${item.country.name} - ${item.league.name} - ${item.league.type}`;  // Value: country.name - league.name - league.type
-
-      // Guardamos en el mapa
-      leagueMap.set(leagueId, leagueInfo);
-      leagueJson[leagueId] = leagueInfo; // Guardamos en el objeto JSON
-    });
-
-    // Convertir el objeto a JSON
-    const leagueJsonString = JSON.stringify(leagueJson, null, 2);
-    console.log("JSON de ligas:", leagueJsonString); // Muestra el JSON en la consola*/
-
-    // Muestra el mapa en la consola
-    /*leagueMap.forEach((value, key) => {
-      console.log(`ID: ${key}, Info: ${value}`);
-    });*/
   }, []);
 
   /**
@@ -139,7 +107,9 @@ export default function NuevaApuesta() {
    */
   async function buscarImagenEnGoogle(query: string): Promise<string[]> {
     try {
-      const url = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(query)}&searchType=image&num=3`;
+      const url = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(
+        query
+      )}&searchType=image&num=3`;
 
       const response = await axios.get(url);
       const items = response.data.items;
@@ -147,15 +117,15 @@ export default function NuevaApuesta() {
       if (items && items.length > 0) {
         return items.map((item: any) => item.link);
       } else {
-        console.error('No se encontraron imágenes.');
+        console.error("No se encontraron imágenes.");
         return [];
       }
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        console.error('Error al buscar la imagen:', error.message);
-        console.error('Detalles del error:', error.response?.data);
+        console.error("Error al buscar la imagen:", error.message);
+        console.error("Detalles del error:", error.response?.data);
       } else {
-        console.error('Error inesperado:', error);
+        console.error("Error inesperado:", error);
       }
       return [];
     }
@@ -187,7 +157,7 @@ export default function NuevaApuesta() {
 
       # Entrada de Ejemplo:
         - Partido: {equipoA} vs {equipoB} y {equipoC} vs {equipoD}
-        - Competición: {competencia} y {competencia2}
+        - Competición: {selectedCompetencia1} y {selectedCompetencia2}
         - Cuota: {cuota}
         - Stake: {stake}
         - Resultado del análisis: {analisis}
@@ -199,8 +169,8 @@ export default function NuevaApuesta() {
       🌞 ¡Saludos equipo! Hoy salimos al campo llenos de energía y con determinación para romper la jornada. Nos enfrentamos a un emocionante partido entre {equipoA} y {equipoB}, y {equipoC} y {equipoD}, y estamos listos para aprovechar nuestra predicción ganadora. 🏆
 
       🍀 Apuesta Gratuita 🍀  
-      🇪🇸 {competencia}  
-      🇪🇸 {competencia} y {competencia2}  
+      🇪🇸 {selectedCompetencia1}  
+      🇪🇸 {selectedCompetencia1} y {selectedCompetencia2}  
       🔘 STAKE {stake} ⚡️Cuota {cuota}⚡️  
       💡 Recomendamos: {recomendacion}
 
@@ -213,8 +183,9 @@ export default function NuevaApuesta() {
     `;
 
     const userInput = `
-      Partido: ${equipoA} vs ${equipoB} ${showSecondMatch ? `y ${equipoC} vs ${equipoD}` : ""}
-      Competición: ${competencia} ${showSecondMatch ? `y ${competencia2}` : ""}
+      Partido: ${equipoA} vs ${equipoB} ${showSecondMatch ? `y ${equipoC} vs ${equipoD}` : ""
+      }
+      Competición: ${selectedCompetencia1} ${showSecondMatch ? `y ${selectedCompetencia2}` : ""}
       Cuota: ${cuota}
       Stake: ${stake}
       Análisis: ${analisis}
@@ -239,28 +210,28 @@ export default function NuevaApuesta() {
 
       // Realizar búsquedas de imágenes con diferentes consultas
       const query1 = `${equipoA} vs ${equipoB}`;
-      const query2 = `${competencia}`;
+      const query2 = `${selectedCompetencia1}`;
       const queries = [query1, query2]; // Inicializar con las consultas del primer partido
 
       if (showSecondMatch) {
         const query3 = `${equipoC} vs ${equipoD}`;
-        const query4 = `${competencia2}`;
+        const query4 = `${selectedCompetencia2}`;
         queries.push(query3, query4); // Agregar consultas del segundo partido
         queries.push(`jugadores de ${equipoC}`, `jugadores de ${equipoD}`); // Agregar jugadores del segundo partido
       }
       queries.push(`jugadores de ${equipoA}`, `jugadores de ${equipoB}`); // Agregar jugadores del primer partido
 
-      console.log(queries);
-
       try {
-        const imagenesGoogleAPIUrls = await Promise.all(queries.map(query => buscarImagenEnGoogle(query)));
+        const imagenesGoogleAPIUrls = await Promise.all(
+          queries.map((query) => buscarImagenEnGoogle(query))
+        );
         const flattenedImages = imagenesGoogleAPIUrls.flat(); // Aplanar el array de imágenes
         if (flattenedImages.length > 0) {
           setGoogleImageUrls(flattenedImages);
           setCurrentImageIndex(0);
           console.log(`Imágenes encontradas: ${flattenedImages}`);
         } else {
-          console.log('No se encontraron imágenes.');
+          console.log("No se encontraron imágenes.");
         }
       } catch (error) {
         console.error("Error al buscar imágenes:", error);
@@ -272,10 +243,108 @@ export default function NuevaApuesta() {
     }
   };
 
+  // Function to save betting information to Firestore
+  const guardarPronosticoBBDD = async () => {
+    const currentDate = new Date();
+    const docId = currentDate.toISOString(); // Use ISO string for unique ID
+    const bettingData = {
+      partidoAcabado,
+      mensajeResultadoEnviado,
+      equipoA,
+      equipoB,
+      selectedPartido1,
+      equipoC: showSecondMatch ? equipoC : null,
+      equipoD: showSecondMatch ? equipoD : null,
+      selectedPartido2,
+      selectedCompetencia1,
+      selectedCompetencia2: showSecondMatch ? selectedCompetencia2 : null,
+      stake,
+      cuota,
+      recomendacion,
+      message,
+      editedImageUrl,
+      timestamp: currentDate,
+    };
+
+    try {
+      await setDoc(doc(db, "pronosticosGratuitos", docId), bettingData);
+    } catch (error) {
+      console.error("Error saving betting information to Firestore:", error);
+    }
+  };
+
+// Get all available fixtures from one {date} and league
+  const buscarPartidos = async (leagueId: string, setPartidos: React.Dispatch<React.SetStateAction<any[]>>) => {
+    try {
+      const response = await axios.get(API_FOOTBALL_URL, {
+        headers: {
+          "x-apisports-key": API_FOOTBALL_KEY,
+        },
+        params: {
+          date: "2021-01-30", // Puedes cambiar la fecha según sea necesario
+          league: leagueId,
+          season: "2020",
+        },
+      });
+      setPartidos(response.data.response);
+    } catch (error) {
+      console.error("Error al buscar partidos:", error);
+    }
+  };
+
+  const competenciaOptions = Object.entries(leaguesIDName).map(([key, value]) => ({
+    value: key,
+    label: value,
+  }));
+
+
+  const handleCompetenciaSelect1 = (selectedOption: any) => {
+    setSelectedCompetencia1(selectedOption);
+    if (selectedOption) {
+      buscarPartidos(selectedOption.value, setPartidos1);
+    }
+  };
+
+  const handleCompetenciaSelect2 = (selectedOption: any) => {
+    setSelectedCompetencia2(selectedOption);
+    if (selectedOption) {
+      buscarPartidos(selectedOption.value, setPartidos2);
+    }
+  };
+
+  const partidoOptions1 = partidos1.map((partido) => ({
+    value: partido.fixture.id,
+    label: `${partido.teams.home.name} vs ${partido.teams.away.name}`,
+    data: partido, // Store the entire partido object for easy access
+  }));
+
+  const partidoOptions2 = partidos2.map((partido) => ({
+    value: partido.fixture.id,
+    label: `${partido.teams.home.name} vs ${partido.teams.away.name}`,
+    data: partido, // Store the entire partido object for easy access
+  }));
+
+  const handlePartidoSelect1 = (selectedOption: any) => {
+    setSelectedPartido1(selectedOption);
+    if (selectedOption) {
+      const [team1, team2] = selectedOption.label.split(" vs ");
+      setEquipoA(team1);
+      setEquipoB(team2);
+    }
+  };
+
+  const handlePartidoSelect2 = (selectedOption: any) => {
+    setSelectedPartido2(selectedOption);
+    if (selectedOption) {
+      const [team1, team2] = selectedOption.label.split(" vs ");
+      setEquipoC(team1);
+      setEquipoD(team2);
+    }
+  };
+
   const enviarATelegram = async () => {
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
     try {
-
       // Envio imagen de Apuesta Gratuita a telegram
       const photoUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
       await axios.post(photoUrl, {
@@ -295,7 +364,15 @@ export default function NuevaApuesta() {
         text: message,
       });
 
-      console.log("Mensaje enviado a Telegram:", message);
+      // lógica para enviar la imagen de la apuesta editada al canal de Telegram
+      await axios.post(photoUrl, {
+        chat_id: TELEGRAM_CHAT_ID,
+        photo: editedImageUrl,
+      });
+
+      // Save the betting information to Firestore
+      await guardarPronosticoBBDD();
+
       alert("Mensaje enviado correctamente al canal!");
     } catch (error) {
       console.error("Error enviando mensaje a Telegram:", error);
@@ -305,20 +382,50 @@ export default function NuevaApuesta() {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
-    console.log("JORGE", textareaRef.current);
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto"; // Reset height
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`; // Set to scroll height
     }
   }, [message]); // Ensure this effect runs whenever `message` changes
 
+  let cifraGanancias = Number(importe) * Number(cuota); // Reemplaza con tu valor real
 
+  const handleImageUploadAndEdit = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const formData = new FormData();
+      formData.append("image", file); // Append the file to the FormData object
+      formData.append("cifraVerde", importe + ',00€'); // Append your other parameters
+      formData.append("cifraImp", importe + ',00€');
+      formData.append("cifraGanancias", cifraGanancias.toString() + ',00€');
+
+      const response = await fetch("http://localhost:8080/edit-image", {
+        // const response = await fetch("https://jimp-cloudrun-713344855947.us-central1.run.app/edit-image",{
+        method: "POST",
+        body: formData, // Use FormData as the body
+      }
+      );
+
+      if (response.ok) {
+        const data = await response.json(); // Parse the JSON response
+        const editedImageUrl = data.imageUrl; // Extract the URL
+        setEditedImageUrl(editedImageUrl); // Update with the Firebase Storage URL
+      } else {
+        console.error("Error editing image");
+      }
+    } else {
+      alert("Please upload an image first.");
+    }
+  };
 
   return (
     <div className="flex flex-col items-center justify-top min-h-screen p-2 bg-gray-100">
-      <h1 className="text-xl font-bold mb-6 text-blue-600">Generador de Pronósticos Gratuitos</h1>
+      <h1 className="text-xl font-bold mb-6 text-blue-600">
+        Generador de Pronósticos Gratuitos
+      </h1>
       <div className="w-full max-w-md p-4 bg-white rounded-lg shadow-md space-y-4">
-
         <div className="relative w-full h-48 mb-2">
           <Image
             src={imageUrl}
@@ -337,124 +444,58 @@ export default function NuevaApuesta() {
           </button>
         </div>
 
-        <input
-          type="text"
-          placeholder="Equipo A"
-          value={equipoA}
-          onChange={(e) => setEquipoA(e.target.value)}
-          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        {/* Autocompletado para Equipo A */}
-        {equipoA && (
-          <ul className="absolute bg-white border border-gray-300 rounded-md w-full z-10">
-            {filterOptions(equipos, equipoA).map((equipo) => (
-              <li key={equipo} onClick={() => setEquipoA(equipo)} className="p-2 hover:bg-gray-200 cursor-pointer">
-                {equipo}
-              </li>
-            ))}
-          </ul>
-        )}
+        {/* Competencia 1 and Partido 1 */}
 
-        <input
-          type="text"
-          placeholder="Equipo B"
-          value={equipoB}
-          onChange={(e) => setEquipoB(e.target.value)}
-          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <Select
+          options={competenciaOptions}
+          onChange={handleCompetenciaSelect1}
+          placeholder="Seleccionar Liga"
+          className="w-full p-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          isClearable={true}
         />
-        {/* Autocompletado para Equipo B */}
-        {equipoB && (
-          <ul className="absolute bg-white border border-gray-300 rounded-md w-full z-10">
-            {filterOptions(equipos, equipoB).map((equipo) => (
-              <li key={equipo} onClick={() => setEquipoB(equipo)} className="p-2 hover:bg-gray-200 cursor-pointer">
-                {equipo}
-              </li>
-            ))}
-          </ul>
-        )}
 
-        <input
-          type="text"
-          placeholder="Competición"
-          value={competencia}
-          onChange={(e) => setCompetencia(e.target.value)}
-          className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <Select
+          options={partidoOptions1}
+          onChange={handlePartidoSelect1}
+          placeholder="Buscar y Seleccionar Partido"
+          className="w-full p-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mt-4"
+          isDisabled={!selectedCompetencia1} // Disable if no competencia is selected
+          isClearable={true}
         />
-        {/* Autocompletado para Competición */}
-        {competencia && (
-          <ul className="absolute bg-white border border-gray-300 rounded-md w-full z-10">
-            {filterOptions(competiciones, competencia).map((comp) => (
-              <li key={comp} onClick={() => setCompetencia(comp)} className="p-2 hover:bg-gray-200 cursor-pointer">
-                {comp}
-              </li>
-            ))}
-          </ul>
-        )}
 
         {/* Botón para mostrar los campos del segundo partido */}
         <button
           onClick={() => setShowSecondMatch(!showSecondMatch)}
-          className={`w-full py-1 rounded-md transition-colors ${showSecondMatch ? "bg-red-300" : "bg-green-300"} text-white hover:bg-opacity-80`}
+          className={`w-full py-1 rounded-md transition-colors ${showSecondMatch ? "bg-red-300" : "bg-green-300"
+            } text-white hover:bg-opacity-80`}
         >
-          {showSecondMatch ? "Ocultar Segundo Partido" : "Añadir Segundo Partido"}
+          {showSecondMatch
+            ? "Ocultar Segundo Partido"
+            : "Añadir Segundo Partido"}
         </button>
 
         {/* Campos del segundo partido */}
         {showSecondMatch && (
           <>
-            <input
-              type="text"
-              placeholder="Equipo C"
-              value={equipoC}
-              onChange={(e) => setEquipoC(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            {/* Autocompletado para Equipo C */}
-            {equipoC && (
-              <ul className="absolute bg-white border border-gray-300 rounded-md w-full z-10">
-                {filterOptions(equipos, equipoC).map((equipo) => (
-                  <li key={equipo} onClick={() => setEquipoC(equipo)} className="p-2 hover:bg-gray-200 cursor-pointer">
-                    {equipo}
-                  </li>
-                ))}
-              </ul>
-            )}
 
-            <input
-              type="text"
-              placeholder="Equipo D"
-              value={equipoD}
-              onChange={(e) => setEquipoD(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            {/* Competencia 2 and Partido 2 */}
+            <Select
+              options={competenciaOptions}
+              onChange={handleCompetenciaSelect2}
+              placeholder="Seleccionar Liga 2"
+              className="w-full p-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mt-8"
+              isClearable={true}
             />
-            {/* Autocompletado para Equipo D */}
-            {equipoD && (
-              <ul className="absolute bg-white border border-gray-300 rounded-md w-full z-10">
-                {filterOptions(equipos, equipoD).map((equipo) => (
-                  <li key={equipo} onClick={() => setEquipoD(equipo)} className="p-2 hover:bg-gray-200 cursor-pointer">
-                    {equipo}
-                  </li>
-                ))}
-              </ul>
-            )}
 
-            <input
-              type="text"
-              placeholder="Competición 2"
-              value={competencia2}
-              onChange={(e) => setCompetencia2(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            <Select
+              options={partidoOptions2}
+              onChange={handlePartidoSelect2}
+              placeholder="Buscar y Seleccionar Partido 2"
+              className="w-full p-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mt-4"
+              isDisabled={!selectedCompetencia2} // Disable if no competencia is selected
+              isClearable={true}
             />
-            {/* Autocompletado para Competición 2 */}
-            {competencia2 && (
-              <ul className="absolute bg-white border border-gray-300 rounded-md w-full z-10">
-                {filterOptions(competiciones, competencia2).map((comp) => (
-                  <li key={comp} onClick={() => setCompetencia2(comp)} className="p-2 hover:bg-gray-200 cursor-pointer">
-                    {comp}
-                  </li>
-                ))}
-              </ul>
-            )}
+
           </>
         )}
 
@@ -476,6 +517,36 @@ export default function NuevaApuesta() {
             inputMode="decimal"
           />
         </div>
+        <div className="flex space-x-4">
+          <div className="flex-none w-32">
+            <input
+              type="text"
+              placeholder="Imp. Apuesta"
+              value={importe}
+              onChange={(e) => setImporte(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              inputMode="decimal"
+            />
+          </div>
+          {stake && importe && (
+            <div className="flex-auto w-64">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUploadAndEdit} // Cambia a handleImageUploadAndEdit
+                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Display the edited image if available */}
+        {editedImageUrl && (
+          <div className="mt-4">
+            <h2 className="text-lg font-semibold">Imagen Editada</h2>
+            <img src={editedImageUrl} alt="Edited" className="w-full h-auto" />
+          </div>
+        )}
 
         <textarea
           placeholder="Análisis"
@@ -501,9 +572,23 @@ export default function NuevaApuesta() {
         {loading && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
             <div className="bg-white p-6 rounded-lg shadow-lg flex items-center space-x-4">
-              <svg className="animate-spin h-5 w-5 text-indigo-500" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8z"></path>
+              <svg
+                className="animate-spin h-5 w-5 text-indigo-500"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8z"
+                ></path>
               </svg>
               <span className="text-gray-700">Generando mensaje...</span>
             </div>
@@ -521,20 +606,30 @@ export default function NuevaApuesta() {
             />
             <div className="flex justify-between mt-2">
               <button
-                onClick={() => setCurrentImageIndex((prevIndex) => (prevIndex > 0 ? prevIndex - 1 : googleImageUrls.length - 1))}
+                onClick={() =>
+                  setCurrentImageIndex((prevIndex) =>
+                    prevIndex > 0 ? prevIndex - 1 : googleImageUrls.length - 1
+                  )
+                }
                 className="w-1/2 p-2 bg-blue-300 text-white hover:bg-gray-200 transition rounded-none"
               >
                 ⬅️
               </button>
               <button
-                onClick={() => setCurrentImageIndex((prevIndex) => (prevIndex < googleImageUrls.length - 1 ? prevIndex + 1 : 0))}
+                onClick={() =>
+                  setCurrentImageIndex((prevIndex) =>
+                    prevIndex < googleImageUrls.length - 1 ? prevIndex + 1 : 0
+                  )
+                }
                 className="w-1/2 p-2 bg-blue-300 text-white hover:bg-gray-200 transition rounded-none"
               >
                 ➡️
               </button>
             </div>
 
-            <h2 className="text-lg font-semibold mb-2 text-green-700">Mensaje Generado:</h2>
+            <h2 className="text-lg font-semibold mb-2 text-green-700">
+              Mensaje Generado:
+            </h2>
             <textarea
               ref={textareaRef}
               value={message}
