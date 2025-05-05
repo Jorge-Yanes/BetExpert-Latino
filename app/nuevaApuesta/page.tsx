@@ -11,7 +11,7 @@ import dotenv from "dotenv";
 import leagues from "../../data/leagues.json";
 import leaguesIDName from "../../data/leaguesIDName.json";
 import { setDoc, doc } from "firebase/firestore";
-import Select from 'react-select';
+import Select from "react-select";
 
 // Cargar las variables de entorno
 dotenv.config();
@@ -45,7 +45,6 @@ const openai = new OpenAI({
   dangerouslyAllowBrowser: true,
 });
 
-
 export default function NuevaApuesta() {
   const [loading, setLoading] = useState(false);
   //const [competencia, setCompetencia] = useState<string>("");
@@ -61,22 +60,29 @@ export default function NuevaApuesta() {
   const [googleImageUrls, setGoogleImageUrls] = useState<string[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
   const [editedImageUrl, setEditedImageUrl] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate2, setSelectedDate2] = useState(new Date());
 
   // Nuevos estados para el segundo partido
   const [showSecondMatch, setShowSecondMatch] = useState<boolean>(false); // Estado para controlar la visibilidad
   const [partidoAcabado, setPartidoAcabado] = useState<boolean>(false); // Estado para controlar la visibilidad
-  const [mensajeResultadoEnviado, setMensajeResultadoEnviado] = useState<boolean>(false); // Estado para controlar la visibilidad
+  const [mensajeResultadoEnviado, setMensajeResultadoEnviado] =
+    useState<boolean>(false); // Estado para controlar la visibilidad
 
   const [partidos, setPartidos] = useState<any[]>([]);
   const [partidos1, setPartidos1] = useState<any[]>([]);
   const [selectedPartido1, setSelectedPartido1] = useState<any | null>(null);
-  const [selectedCompetencia1, setSelectedCompetencia1] = useState<any | null>(null);
+  const [selectedCompetencia1, setSelectedCompetencia1] = useState<any | null>(
+    null
+  );
   const [equipoA, setEquipoA] = useState<string>("");
   const [equipoB, setEquipoB] = useState<string>("");
 
   const [partidos2, setPartidos2] = useState<any[]>([]);
   const [selectedPartido2, setSelectedPartido2] = useState<any | null>(null);
-  const [selectedCompetencia2, setSelectedCompetencia2] = useState<any | null>(null);
+  const [selectedCompetencia2, setSelectedCompetencia2] = useState<any | null>(
+    null
+  );
   const [equipoC, setEquipoC] = useState<string>("");
   const [equipoD, setEquipoD] = useState<string>("");
 
@@ -169,8 +175,10 @@ export default function NuevaApuesta() {
       🌞 ¡Saludos equipo! Hoy salimos al campo llenos de energía y con determinación para romper la jornada. Nos enfrentamos a un emocionante partido entre {equipoA} y {equipoB}, y {equipoC} y {equipoD}, y estamos listos para aprovechar nuestra predicción ganadora. 🏆
 
       🍀 Apuesta Gratuita 🍀  
-      🇪🇸 {selectedCompetencia1}  
-      🇪🇸 {selectedCompetencia1} y {selectedCompetencia2}  
+      🏆 {selectedCompetencia1}  
+      🏆 {selectedCompetencia1} y {selectedCompetencia2}  
+      🇪🇸 {equipoA} vs {equipoB}  
+      🇪🇸 {equipoC} vs {equipoD}  
       🔘 STAKE {stake} ⚡️Cuota {cuota}⚡️  
       💡 Recomendamos: {recomendacion}
 
@@ -183,8 +191,7 @@ export default function NuevaApuesta() {
     `;
 
     const userInput = `
-      Partido: ${equipoA} vs ${equipoB} ${showSecondMatch ? `y ${equipoC} vs ${equipoD}` : ""
-      }
+      Partido: ${equipoA} vs ${equipoB} ${showSecondMatch ? `y ${equipoC} vs ${equipoD}` : ""}
       Competición: ${selectedCompetencia1} ${showSecondMatch ? `y ${selectedCompetencia2}` : ""}
       Cuota: ${cuota}
       Stake: ${stake}
@@ -273,42 +280,53 @@ export default function NuevaApuesta() {
     }
   };
 
-// Get all available fixtures from one {date} and league
-  const buscarPartidos = async (leagueId: string, setPartidos: React.Dispatch<React.SetStateAction<any[]>>) => {
+  // Get all available fixtures from one {date} and league
+  const buscarPartidos = async (
+    leagueId: string,
+    setPartidos: React.Dispatch<React.SetStateAction<any[]>>,
+    fecha: Date
+  ) => {
     try {
+      // Convert the timestamp to a date string in the format YYYY-MM-DD
+      const formattedDate = new Date(fecha).toISOString().split("T")[0];
+
+      console.log("ENTRA EN BUSCAR PARTIDOS", formattedDate.substring(0, 4));
+      console.log("ENTRA EN BUSCAR PARTIDOS", leagueId);
+
       const response = await axios.get(API_FOOTBALL_URL, {
         headers: {
           "x-apisports-key": API_FOOTBALL_KEY,
         },
         params: {
-          date: "2021-01-30", // Puedes cambiar la fecha según sea necesario
+          date: formattedDate,
           league: leagueId,
-          season: "2020",
+          season: formattedDate.substring(0, 4),
         },
       });
       setPartidos(response.data.response);
+      console.log("ENTRA EN BUSCAR PARTIDOS", response.data.response);
     } catch (error) {
       console.error("Error al buscar partidos:", error);
     }
   };
-
-  const competenciaOptions = Object.entries(leaguesIDName).map(([key, value]) => ({
-    value: key,
-    label: value,
-  }));
-
+  const competenciaOptions = Object.entries(leaguesIDName).map(
+    ([key, value]) => ({
+      value: key,
+      label: value,
+    })
+  );
 
   const handleCompetenciaSelect1 = (selectedOption: any) => {
     setSelectedCompetencia1(selectedOption);
     if (selectedOption) {
-      buscarPartidos(selectedOption.value, setPartidos1);
+      buscarPartidos(selectedOption.value, setPartidos1, selectedDate);
     }
   };
 
   const handleCompetenciaSelect2 = (selectedOption: any) => {
     setSelectedCompetencia2(selectedOption);
     if (selectedOption) {
-      buscarPartidos(selectedOption.value, setPartidos2);
+      buscarPartidos(selectedOption.value, setPartidos2, selectedDate2);
     }
   };
 
@@ -374,6 +392,7 @@ export default function NuevaApuesta() {
       await guardarPronosticoBBDD();
 
       alert("Mensaje enviado correctamente al canal!");
+      window.location.reload(); // Refresh the page
     } catch (error) {
       console.error("Error enviando mensaje a Telegram:", error);
     }
@@ -388,7 +407,7 @@ export default function NuevaApuesta() {
     }
   }, [message]); // Ensure this effect runs whenever `message` changes
 
-  let cifraGanancias = Number(importe) * Number(cuota); // Reemplaza con tu valor real
+  let cifraGanancias = Number(importe) * Number(cuota.replace(/,/g, '.')); // Reemplaza con tu valor real
 
   const handleImageUploadAndEdit = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -397,16 +416,16 @@ export default function NuevaApuesta() {
     if (file) {
       const formData = new FormData();
       formData.append("image", file); // Append the file to the FormData object
-      formData.append("cifraVerde", importe + ',00€'); // Append your other parameters
-      formData.append("cifraImp", importe + ',00€');
-      formData.append("cifraGanancias", cifraGanancias.toString() + ',00€');
+      formData.append("cifraVerde", importe + ",00€"); // Append your other parameters
+      formData.append("cifraImp", importe + ",00€");
+      formData.append("cifraGanancias", cifraGanancias.toString() + ",00€");
+      setLoading(true);
 
       //const response = await fetch("http://localhost:8080/edit-image", {
-      const response = await fetch("https://jimp-cloudrun-713344855947.us-central1.run.app/edit-image",{
+      const response = await fetch("https://jimp-cloudrun-713344855947.us-central1.run.app/edit-image", {
         method: "POST",
         body: formData, // Use FormData as the body
-      }
-      );
+      });
 
       if (response.ok) {
         const data = await response.json(); // Parse the JSON response
@@ -415,6 +434,7 @@ export default function NuevaApuesta() {
       } else {
         console.error("Error editing image");
       }
+      setLoading(false);
     } else {
       alert("Please upload an image first.");
     }
@@ -453,16 +473,36 @@ export default function NuevaApuesta() {
           className="w-full p-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           isClearable={true}
         />
-
-        <Select
-          options={partidoOptions1}
-          onChange={handlePartidoSelect1}
-          placeholder="Buscar y Seleccionar Partido"
-          className="w-full p-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mt-4"
-          isDisabled={!selectedCompetencia1} // Disable if no competencia is selected
-          isClearable={true}
-        />
-
+        <div className="flex space-x-2">
+          <div className="flex w-32">
+            <input
+              type="date"
+              value={selectedDate.toISOString().split("T")[0]}
+              onChange={(e) => {
+                const newDate = new Date(e.target.value);
+                setSelectedDate(newDate);
+                console.log(newDate);
+                if (selectedCompetencia1) {
+                  buscarPartidos(
+                    selectedCompetencia1.value,
+                    setPartidos1,
+                    newDate
+                  );
+                }
+              }}
+              className="w-full p-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mt-4"
+              disabled={!selectedCompetencia1} // Disable if no competencia is selected
+            />
+          </div>
+          <Select
+            options={partidoOptions1}
+            onChange={handlePartidoSelect1}
+            placeholder="Buscar y Seleccionar Partido"
+            className="w-full p-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mt-4"
+            isDisabled={!selectedCompetencia1} // Disable if no competencia is selected
+            isClearable={true}
+          />
+        </div>
         {/* Botón para mostrar los campos del segundo partido */}
         <button
           onClick={() => setShowSecondMatch(!showSecondMatch)}
@@ -477,7 +517,6 @@ export default function NuevaApuesta() {
         {/* Campos del segundo partido */}
         {showSecondMatch && (
           <>
-
             {/* Competencia 2 and Partido 2 */}
             <Select
               options={competenciaOptions}
@@ -487,22 +526,44 @@ export default function NuevaApuesta() {
               isClearable={true}
             />
 
-            <Select
-              options={partidoOptions2}
-              onChange={handlePartidoSelect2}
-              placeholder="Buscar y Seleccionar Partido 2"
-              className="w-full p-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mt-4"
-              isDisabled={!selectedCompetencia2} // Disable if no competencia is selected
-              isClearable={true}
-            />
-
+            <div className="flex space-x-2">
+              <div className="flex w-32">
+                <input
+                  type="date"
+                  value={selectedDate2.toISOString().split("T")[0]}
+                  onChange={(e) => {
+                    const newDate = new Date(e.target.value);
+                    setSelectedDate2(newDate);
+                    console.log(newDate);
+                    if (selectedCompetencia2) {
+                      buscarPartidos(
+                        selectedCompetencia2.value,
+                        setPartidos2,
+                        newDate
+                      );
+                    }
+                  }}
+                  className="w-full p-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mt-4"
+                  disabled={!selectedCompetencia2} // Disable if no competencia is selected
+                />
+              </div>
+              <Select
+                options={partidoOptions2}
+                onChange={handlePartidoSelect2}
+                placeholder="Buscar y Seleccionar Partido 2"
+                className="w-full p-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mt-4"
+                isDisabled={!selectedCompetencia2} // Disable if no competencia is selected
+                isClearable={true}
+              />
+            </div>
           </>
         )}
+
 
         <div className="flex space-x-4">
           <input
             type="text"
-            placeholder="Cuota"
+            placeholder="Cuota (Usar . no ,)"
             value={cuota}
             onChange={(e) => setCuota(e.target.value)}
             className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -590,7 +651,7 @@ export default function NuevaApuesta() {
                   d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8z"
                 ></path>
               </svg>
-              <span className="text-gray-700">Generando mensaje...</span>
+              <span className="text-gray-700">Cargando...</span>
             </div>
           </div>
         )}

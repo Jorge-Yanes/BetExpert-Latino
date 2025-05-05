@@ -76,7 +76,6 @@ export default function Page() {
     setDate(newDate);
 
     const dateKey = newDate.toString().split("T")[0]; // Format date as YYYY-MM-DD
-    console.log("Selected Date: ", dateKey); // Debug
 
     const docRef = doc(db, "mensajesBuenosDias", dateKey);
     const docSnap = await getDoc(docRef);
@@ -93,11 +92,6 @@ export default function Page() {
       await getFixturesByDate('2022-10-19'); // Llama a la función para obtener los fixtures
     }
 
-    // Verificar los valores antes de llamar a generarMensaje
-    console.log("Equipo A:", equipoA);
-    console.log("Equipo B:", equipoB);
-    console.log("Competencia:", competencia);
-
   };
 
 
@@ -108,7 +102,6 @@ export default function Page() {
   // Función para obtener los partidos en una fecha específica
   const getFixturesByDate = async (date: string) => {
     const leagues = ['39', '140', '135', '78', '2', '1', '13', '61', '3', '71']; // IDs de las ligas: Premier League, La Liga, Serie A, Champions League, Bundesliga, Copa del Mundo, Copa Libertadores, Ligue 1, UEFA Europa League, Brasileirão
-    //const leagues = ['140']; // IDs de las ligas
 
     try {
       const allFixtures = []; // Array para almacenar todos los partidos
@@ -131,8 +124,6 @@ export default function Page() {
           const homeTeam = fixture.teams.home.name;
           const awayTeam = fixture.teams.away.name;
           const competition = fixture.league.name; // Cambiado a competencia
-          console.log(`${homeTeam} vs ${awayTeam} - ${competition}`); // Imprime la información de los partidos
-
           // Agregar el partido al array
           allFixtures.push({ equipoA: homeTeam, equipoB: awayTeam, competencia: competition });
         });
@@ -163,7 +154,7 @@ export default function Page() {
 
             # Formato de Salida
 
-            El mensaje debe ser un párrafo motivacional breve, que incluya un saludo matutino, un buen resumen de los partidos mas importantes del día con un enfoque positivo,  y un cierre optimista.
+            El mensaje debe ser un párrafo motivacional breve, que incluya un saludo matutino, un buen resumen de los partidos mas importantes del día con un enfoque positivo, y un cierre optimista.
 
               # Entrada de Ejemplo:
                     - Partido: {equipoA} vs {equipoB} <> Liga o Competicion: {competencia}
@@ -212,12 +203,10 @@ export default function Page() {
   const fetchImageUrls = async () => {
     const storageRef = ref(getStorage(), "buenosDiasImages");
     const listResult = await listAll(storageRef);
-    console.log("List of Images: ", listResult); // Debug
 
     const urls = await Promise.all(
       listResult.items.map(async (item) => await getDownloadURL(item))
     );
-    console.log("Image URLs: ", urls); // Debug
     setImageUrls(urls);
     setImageUrl(getRandomImage());
   };
@@ -257,7 +246,7 @@ export default function Page() {
         });
         console.log("Mensaje guardado correctamente y programado a", dateKey, scheduledTime);
         setMessage("Data saved successfully!");
-        alert("Mensaje guardado correctamente y programado a `${dateKey}` "); // Pop-up de confirmación
+        alert("Mensaje guardado y programado correctamente"); // Pop-up de confirmación
       } catch (error) {
         console.log("Error al guardar los datos en Firestore: ", error); // Debug de errores
         console.error("Error details: ", JSON.stringify(error, null, 2));
@@ -270,7 +259,6 @@ export default function Page() {
 
   const toggleModal = () => {
     setIsModalOpen(!isModalOpen);
-    console.log("Modal state: ", isModalOpen ? "Closed" : "Opened"); // Debug
   };
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -336,7 +324,31 @@ export default function Page() {
 
         {message && <p className="mt-4 text-green-600">{message}</p>}
       </div>
-
+      {loading && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg flex items-center space-x-4">
+              <svg
+                className="animate-spin h-5 w-5 text-indigo-500"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8z"
+                ></path>
+              </svg>
+              <span className="text-gray-700">Generando mensaje...</span>
+            </div>
+          </div>
+        )}
       {userData ? (
         <div className="mt-6 text-gray-700">
           <p>Hola, {userData.first_name}</p>
