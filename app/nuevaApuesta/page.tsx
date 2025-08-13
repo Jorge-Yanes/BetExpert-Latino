@@ -421,8 +421,8 @@ export default function NuevaApuesta() {
       formData.append("cifraGanancias", cifraGanancias.toString() + ",00€");
       setLoading(true);
 
-      //const response = await fetch("http://localhost:8080/edit-image", {
-      const response = await fetch("https://jimp-cloudrun-713344855947.us-central1.run.app/edit-image", {
+      const response = await fetch("http://localhost:8080/edit-image", {
+      //const response = await fetch("https://jimp-cloudrun-713344855947.us-central1.run.app/edit-image", {
         method: "POST",
         body: formData, // Use FormData as the body
       });
