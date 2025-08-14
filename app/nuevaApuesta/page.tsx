@@ -7,41 +7,37 @@ import OpenAI from "openai";
 import axios from "axios";
 import Image from "next/image";
 import { getStorage, ref, listAll, getDownloadURL } from "firebase/storage";
-import dotenv from "dotenv";
+
 import leagues from "../../data/leagues.json";
 import leaguesIDName from "../../data/leaguesIDName.json";
 import { setDoc, doc } from "firebase/firestore";
 import Select from "react-select";
 
-// Cargar las variables de entorno
-dotenv.config();
-
-const GOOGLE_API_KEY = "AIzaSyBqBYaTcKqtgCtYgTeRxZZZel30IoLxL1Q";
-const GOOGLE_CX = "e3eff5474587546a7";
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
+const GOOGLE_CX = process.env.GOOGLE_CX;
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBGBlSmL5WDTCnjjzgbMdmwNYZmw4Y3Fgk",
-  authDomain: "betexpert-latino.firebaseapp.com",
-  projectId: "betexpert-latino",
-  storageBucket: "betexpert-latino.appspot.com",
-  messagingSenderId: "713344855947",
-  appId: "1:713344855947:web:3aa4f8a93b89e8ea9b898e",
-  measurementId: "G-939C0DNPP7",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore();
 
-const TELEGRAM_BOT_TOKEN = "8106664155:AAEbLO9kcy0ehQyxvztLtw8vIntwSszkkjY"; // Reemplaza esto con tu token de bot de Telegram
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = "-1002356737756"; // Reemplaza esto con el chat ID donde quieres enviar el mensaje
 
 const API_FOOTBALL_URL = "https://v3.football.api-sports.io/fixtures";
-const API_FOOTBALL_KEY = "5608c120367cf9967e9d177199cc2da7"; // Reemplaza con tu clave de API
+const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY; // Reemplaza con tu clave de API
 
 // Create an instance of OpenAIApi
 const openai = new OpenAI({
-  apiKey:
-    "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",
+  apiKey: process.env.OPENAI_API_KEY,
   dangerouslyAllowBrowser: true,
 });
 
